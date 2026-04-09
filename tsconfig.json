@@ -4,6 +4,8 @@
   "_version": "22.0.0",
 
   "compilerOptions": {
+    "types": ["node"],
+    "typeRoots": ["./src/types", "./node_modules/@types"],
     "lib": ["es2024", "ESNext.Array", "ESNext.Collection", "ESNext.Iterator"],
     "module": "ESNext",
     "target": "ESNext",
