@@ -1,5 +1,6 @@
 import { uploadImage } from "@/app/functions/upload-image";
 import type { FastifyPluginAsync } from "fastify";
+import { isRight, unwrapEither } from "@/shared/either";
 
 export const uploadImagesRoute: FastifyPluginAsync = async (server) => {
     server.post('/uploads', {
@@ -46,6 +47,10 @@ export const uploadImagesRoute: FastifyPluginAsync = async (server) => {
 
     }, async (request, reply) => {
 
+        if (!request.isMultipart()) {
+            return reply.status(400).send({ message: 'File is required' });
+        }
+
         const uploadedFile = await request.file({
             limits: {
                 fileSize: 5 * 1024 * 1024, // 5MB
@@ -56,12 +61,21 @@ export const uploadImagesRoute: FastifyPluginAsync = async (server) => {
             return reply.status(400).send({ message: 'File is required' });
         }
 
-        await uploadImage({
+        const result = await uploadImage({
             fileName: uploadedFile.filename,
             contentStream: uploadedFile.file,
             contentType: uploadedFile.mimetype,
         });
 
-        return reply.status(201).send({ uploadId: 'teste' });
+        if (isRight(result)) {
+            return reply.status(201).send({ uploadId: 'teste' });
+        }
+
+        const error = unwrapEither(result);
+
+        switch (error.constructor.name) {
+            case 'InvalidFileFormatError':
+                return reply.status(400).send({ message: error.message });
+        }
     });
 };
