@@ -4,6 +4,7 @@ import { schema } from '@/infra/db/schemas';
 import { Readable } from 'node:stream';
 import { type Either, makeLeft, makeRight } from '@/shared/either';
 import { z } from 'zod';
+import { uploadFileToStorage } from '@/infra/storage/upload-file-to-storage';
 
 const uploadImageInput = z.object({
     fileName: z.string(),
@@ -22,11 +23,19 @@ export async function uploadImage(input: UploadImageInput): Promise<Either<Inval
     if (!allowedMimeTypes.includes(contentType)) {
         return makeLeft(new InvalidFileFormatError());
     }
-    await db.insert(schema.uploads).values({
-        name: fileName,
-        remoteKey: fileName,
-        remoteUrl: fileName,
+
+    const { key, url } = await uploadFileToStorage({
+        folder: 'images',
+        fileName,
+        contentType,
+        contentStream,
     });
 
-    return makeRight({ url: fileName });
+    await db.insert(schema.uploads).values({
+        name: fileName,
+        remoteKey: key,
+        remoteUrl: url,
+    });
+
+    return makeRight({ url });
 }

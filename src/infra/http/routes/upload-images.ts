@@ -68,7 +68,9 @@ export const uploadImagesRoute: FastifyPluginAsync = async (server) => {
         });
 
         if (isRight(result)) {
-            return reply.status(201).send({ uploadId: 'teste' });
+            console.log(unwrapEither(result));
+
+            return reply.status(201).send();
         }
 
         const error = unwrapEither(result);
