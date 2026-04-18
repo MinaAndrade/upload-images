@@ -53,7 +53,7 @@ export const uploadImagesRoute: FastifyPluginAsync = async (server) => {
 
         const uploadedFile = await request.file({
             limits: {
-                fileSize: 5 * 1024 * 1024, // 5MB
+                fileSize: 2 * 1024 * 1024, // 2MB
             }
         });
 
@@ -66,6 +66,10 @@ export const uploadImagesRoute: FastifyPluginAsync = async (server) => {
             contentStream: uploadedFile.file,
             contentType: uploadedFile.mimetype,
         });
+
+        if (uploadedFile.file.truncated) {
+            return reply.status(400).send({ message: 'File size limit exceeded' });
+        }
 
         if (isRight(result)) {
             console.log(unwrapEither(result));
