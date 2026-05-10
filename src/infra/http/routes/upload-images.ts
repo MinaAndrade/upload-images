@@ -1,87 +1,53 @@
 import { uploadImage } from "@/app/functions/upload-image";
-import type { FastifyPluginAsync } from "fastify";
 import { isRight, unwrapEither } from "@/shared/either";
+import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import z from "zod";
 
-export const uploadImagesRoute: FastifyPluginAsync = async (server) => {
+export const uploadImagesRoute: FastifyPluginAsyncZod = async (server) => {
     server.post('/uploads', {
         schema: {
             summary: 'Upload an image',
+            tags: ['uploads'],
             consumes: ['multipart/form-data'],
-
-            body: {
-                type: 'object',
-                properties: {
-                    file: {
-                        type: 'string',
-                        format: 'binary',
-                    },
-                },
-                required: ['file'],
-            },
-
             response: {
-                201: {
-                    type: 'object',
-                    properties: {
-                        uploadId: { type: 'string' }
-                    },
-                    required: ['uploadId']
-                },
-                400: {
-                    type: 'object',
-                    properties: {
-                        message: { type: 'string' }
-                    },
-                    required: ['message']
+                201: z.object({ message: z.string() }),
+                400: z.object({ message: z.string() }),
+            },
+        },
+    },
+        async (request, reply) => {
+            const uploadedFile = await request.file({
+                limits: {
+                    fileSize: 2 * 1024 * 1024, // 2MB
                 }
+            });
+
+            if (!uploadedFile) {
+                return reply.status(400).send({ message: 'File is required' });
             }
-        },
 
-        // 👇 evita erro do Zod
-        validatorCompiler: () => {
-            return () => true;
-        },
-        serializerCompiler: () => {
-            return (data) => JSON.stringify(data); // evita parse Zod
-        }
+            const result = await uploadImage({
+                fileName: uploadedFile.filename,
+                contentType: uploadedFile.mimetype,
+                contentStream: uploadedFile.file,
+            });
 
-    }, async (request, reply) => {
-
-        if (!request.isMultipart()) {
-            return reply.status(400).send({ message: 'File is required' });
-        }
-
-        const uploadedFile = await request.file({
-            limits: {
-                fileSize: 2 * 1024 * 1024, // 2MB
+            if (uploadedFile.file.truncated) {
+                return reply.status(400).send({ message: 'File size exceeds the limit' });
             }
-        });
 
-        if (!uploadedFile) {
-            return reply.status(400).send({ message: 'File is required' });
+            if (isRight(result)) {
+                console.log(unwrapEither(result));
+
+                return reply.status(201).send({ message: 'Image uploaded successfully' });
+            }
+
+            const error = unwrapEither(result);
+
+            switch (error.constructor.name) {
+                case 'InvalidFileFormatError':
+                    return reply.status(400).send({ message: error.message });
+            }
         }
-
-        const result = await uploadImage({
-            fileName: uploadedFile.filename,
-            contentStream: uploadedFile.file,
-            contentType: uploadedFile.mimetype,
-        });
-
-        if (uploadedFile.file.truncated) {
-            return reply.status(400).send({ message: 'File size limit exceeded' });
-        }
-
-        if (isRight(result)) {
-            console.log(unwrapEither(result));
-
-            return reply.status(201).send();
-        }
-
-        const error = unwrapEither(result);
-
-        switch (error.constructor.name) {
-            case 'InvalidFileFormatError':
-                return reply.status(400).send({ message: error.message });
-        }
-    });
+    );
 };

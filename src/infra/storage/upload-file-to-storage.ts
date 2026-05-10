@@ -21,7 +21,7 @@ export async function uploadFileToStorage(input: UploadFileToStorageInput) {
     const fileExtension = extname(fileName);
     const fileNameWithoutExtension = basename(fileName, fileExtension);
 
-    const sanitizedFileName = fileNameWithoutExtension.replace(/[^a-zA-Z0-9-_]/g, "_");
+    const sanitizedFileName = fileNameWithoutExtension.replace(/[^a-zA-Z0-9]/g, '');
     const sanitizedFileNameWithExtension = sanitizedFileName.concat(fileExtension);
 
     const uniqueFileName = `${folder}/${randomUUID()}-${sanitizedFileNameWithExtension}`;
