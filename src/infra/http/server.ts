@@ -11,6 +11,7 @@ import {
 import { getUploadsRoute } from './routes/get-upload';
 import { uploadImagesRoute } from './routes/upload-images';
 import { transformSwaggerSchema } from './transform-swagger-schema';
+import { exportUploadsRoute } from './routes/export-uploads';
 
 const server = fastify();
 
@@ -47,6 +48,7 @@ server.register(fastifySwaggerUi, {
 
 server.register(uploadImagesRoute);
 server.register(getUploadsRoute);
+server.register(exportUploadsRoute);
 
 server.listen({ port: 3333, host: '0.0.0.0' }).then(() => {
   console.log('Server is running on http://localhost:3333');
